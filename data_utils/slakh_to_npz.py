@@ -6,7 +6,7 @@ import librosa
 sys.path.append('../')
 import time
 
-# ignore librosa errors
+# ignore librosa warning
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -23,6 +23,7 @@ class SlakhToNpz():
         
         self.valid_subfolders = glob.glob(self.slakh_folder_path + 'validation/*')
         self.test_subfolders = glob.glob(self.slakh_folder_path + 'test/*')
+        self.debug = None
                
     def _read_as_mono(self, filename):
         data, _ = librosa.load(filename,  sr=self.fs, dtype=np.float32, mono=True)
@@ -33,7 +34,7 @@ class SlakhToNpz():
         return y
         
     def _to_npz(self, file_path, mixture, sources):
-        np.savez(file_path, mixture=mixture, sources=sources, insturuments_num=self.inst_num)
+        np.savez(file_path, mixture=mixture, sources=sources, instruments_num=self.inst_num)
         
     def _silent_exist(self, x):
         norm = np.linalg.norm(x, ord=1, axis=1)
@@ -59,15 +60,19 @@ class SlakhToNpz():
             sources = glob.glob(track_path + '/stems/*')
             
             sources_list = []
-            
+            sources_shape = []
             for i, source_path in enumerate(sources):
                 data = self._read_as_mono(source_path)
+                sources_shape.append(data.shape)
                 sources_list.append(data)
+            
+            print(sources_shape)
                 
             npz_num = 0
             while npz_num < num_npz_per_track:
                 start = time.time()
                 sample_sources = np.array(random.sample(sources_list, self.inst_num))
+                self.debug = sample_sources
                 cut_sources = self._random_cutting(sample_sources)
                 
                 ds_cut_sources = np.zeros((self.inst_num, self.target_fs*self.sec))
@@ -80,13 +85,13 @@ class SlakhToNpz():
                     mixture = np.sum(ds_cut_sources, axis=0)
                     file_path = self.save_folder_path + '{0}/{1}{2}'.format(mode, mode, npz_idx) 
                     self._to_npz(file_path, mixture, ds_cut_sources)
-                    print("create npz:", self.save_folder_path + '{0}/{1}{2}'.format(mode, mode, npz_idx))
+                    print('\033[32m' + "create npz:", self.save_folder_path + '{0}/{1}{2}'.format(mode, mode, npz_idx) + '\033[0m')
                     npz_idx = npz_idx + 1
                 else:
-                    print("silent file exists!")
+                    print("\033[31m" + "silent file exists!" + "\033[0m")
                     
                 end = time.time()
-                print("excute_time:", end - start)
+                print("----excute_time:", end - start)
                     
                                   
     def make_test_tracks(self):
@@ -109,7 +114,7 @@ class SlakhToNpz():
             
 if __name__ == '__main__':
     random.seed(0)
-    obj = SlakhToNpz(inst_num=2, train_npz_num=1, valid_npz_num=1)
+    obj = SlakhToNpz(inst_num=2, train_npz_num=15, valid_npz_num=15)
     obj.make_train_tracks(mode='train')
     obj.make_train_tracks(mode='validation')
     obj.make_test_tracks()

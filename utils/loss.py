@@ -1,7 +1,7 @@
 import torch
 
-class OrPit():
-    def _cal_err(self, est_source, est_res_source, true_source, true_res_source, N):
+class SiSNRLoss():
+    def _cal_err(self, est_source, est_res_source, true_sources, N):
         return self._si_snr(est_source, true_source) + (1/(N-1)) * self._si_snr(est_res_source, true_res_source)
     
     def _si_snr(self, est_source, true_source):
@@ -18,6 +18,7 @@ class OrPit():
     
     def __call__(self, est_sources, est_res_sources, true_sources, true_res_sources, N):
         # todo:batchで計算
+        # accompanyがどれか返すメソッドを定義
         err_list = []
         
         for est_source, est_res_source in zip(est_sources, est_res_sources):

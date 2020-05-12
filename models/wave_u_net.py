@@ -1,6 +1,10 @@
 import torch
 import torch.nn as nn
-
+import torch.nn.functional as F
+import sys
+sys.path.append('../')
+from utils.wave_net_utils import Utils
+    
 class _DownsampleBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride, leakiness):
         super().__init__()
@@ -15,44 +19,38 @@ class _DownsampleBlock(nn.Module):
         h2 = self._downsampling(h1)
         return h1, h2
         
-class _UpsampleBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride, leakiness, last_layer=False):
+class _UpsampleBlock(nn.Module, Utils):
+    def __init__(self, in_channels, out_channels, kernel_size, stride, leakiness):
         super().__init__()
-        self.tanh = nn.Tanh()
         self.leaky_relu = nn.LeakyReLU(leakiness)
         self.conv = nn.Conv1d(in_channels, out_channels, kernel_size, stride)
-        self.last_layer = last_layer
         # self.upsample_layer = _LearnUpsampleLayer((batch_size), channels_size)
     
     def _upsampling(self, x):
-        pass
-    
-    def forward(self, input):
-        if not self.last_layer:
-            h1 = self.leaky_relu(self.conv(input))
-        else:
-            h1 = self.tanh(self.conv(input))
-        
-        h2 = self._upsampling(h1)
+        channel, batch, source_len = x.shape
+        return F.upsample(x, size=(source_len*2 -1), mode='linear')
+  
+    def forward(self, input, ds_feature):
+        us_feature = self._upsampling(input)
+        h1 = self.cat_operater(us_feature, ds_feature)
+        h2 = self.leaky_relu(self.conv(h1))
         return h2
+                                  
+# class _LearnUpsampleLayer(nn.Module):
+#     def __init__(self, channels_size):
+#         super().__init__()
+#         self.init_weights = torch.randn((channels_size, source_len, 2), dtype=torch.float32, requires_grad=True)
         
-                            
-class _LearnUpsampleLayer(nn.Module):
-    def __init__(self, channels_size):
-        super().__init__()
-        batch_size, channels_size, 
-        self.init_weights = torch.randn((channels_size, 2), dtype=torch.float32, requires_grad=True)
+#     def forward(self):
+#         weights = torch.sigmoid(self.init_weights)
+#         counter_weights = 1.0 - torch.sigmoid(weights)
+#         counter_weights.requires_grad = False
         
-    def forward(self):
-        counter_weights = 1.0 - torch.sigmoid(self.init_weights)
-        
-        
-        
-class WaveUNet(nn.Module):
-    def __init__(self):
+class WaveUNet(nn.Module, Utils):
+    def __init__(self, sample_len=147443):
         super().__init__()
         self.depth = 12
-        self.Lm = 147443
+        self.Lm = sample_len
         self.Ls = 16389
         self.ds_kernel_size = 15
         self.us_kernel_size = 5
@@ -87,24 +85,8 @@ class WaveUNet(nn.Module):
                                                  leakiness=self.leakiness))
         
         
-        self.last_layer = _UpsampleBlock(in_channels=25,
-                                         out_channels=1,
-                                         kernel_size=self.us_kernel_size,
-                                         stride=self.stride,
-                                         leakiness=self.leakiness,
-                                         last_layer=True)
-        
-
-    def _centre_crop(self, us_feature, ds_feature):
-        d = ds_feature.shape[2] - us_feature.shape[2]
-        return ds_feature[:,:,d//2:-d+(d//2)]
-        
-    
-    def _cat_operater(self, us_feature, ds_feature):
-        print('us_feature:',us_feature)
-        print('ds_feature:', ds_feature)
-        cropped_feature = self._centre_crop(us_feature, ds_feature)
-        return torch.cat([cropped_feature, us_feature], dim=1)
+        self.last_layer = nn.Sequential(nn.Conv1d(25, 1, 1, self.stride),
+                                        nn.Tanh())
         
     def forward(self, input):
         input = input.unsqueeze(1)
@@ -118,20 +100,15 @@ class WaveUNet(nn.Module):
             output_features.append(output_feature)
             conv_features.append(conv_feature)
             
-        _, output_feature = self.bridge_layer(output_features[-1])
-        output_features.append(output_feature)
-        
-        i = 0
-        for up_block in self.up_blocks:
-            input_feature = self._cat_operater(output_features[-1], conv_features[-1])
-            output_feature = up_block(input_feature)
+        conv_feature, _ = self.bridge_layer(output_features[-1])
+        output_features.append(conv_feature)
+
+        for i, up_block in enumerate(self.up_blocks):
+            output_feature = up_block(output_features[-1], conv_features[-(i+1)])
             output_features.append(output_feature)
-            i = i + 1
-            print("iter:", i)
             
-        last_input_feature = self._cat_operater(output_features[-1], output_features[0])
-        est_source = self.last_layer(last_input_feature)
-        accompany_source = self._centre_crop(est_source, input) - est_source
+        est_source = self.last_layer(self.cat_operater(output_features[-1], conv_features[0]))
+        accompany_source = self.centre_crop(est_source, input) - est_source
         
         return est_source, accompany_source
     

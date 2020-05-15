@@ -1,11 +1,15 @@
 import torch
 import sys
+import time
 sys.path.append('../')
 from models.wave_u_net import WaveUNet
 from data_utils.slakh_dataset import SlakhDataset
 from utils.loss import SiSNRLoss
 from utils.wave_net_utils import Utils
 from tqdm import tqdm
+import numpy as np
+import matplotlib.pyplot as plt
+%matplotlib inline
    
 class WaveUNetRunner(Utils):
     def __init__(self, cfg):
@@ -50,20 +54,31 @@ class WaveUNetRunner(Utils):
             
         return (running_loss / (i+1))
     
-    
     def train(self):
-        for epoch in tqdm(range(self.epoch_num)):
+        train_loss = np.array([])
+        valid_loss = np.array([])
+        print("start train")
+        for epoch in range(self.epoch_num):
             # train
+            print('epoch{0}'.format(epoch))
+            start = time.time()
             self.model.train()
-            train_loss = self._run(self.model, self.criterion, self.train_data_loader, self.train_batch_size, mode='train')
-            
+            tmp_train_loss = self._run(self.model, self.criterion, self.train_data_loader, self.train_batch_size, mode='train')
+            train_loss = np.append(train_loss, tmp_train_loss.clone().numpy())
             # validation
             self.model.eval()
             with torch.no_grad():
-               valid_loss = self._run(self.model, self.criterion, self.valid_data_loader, self.valid_batch_size, mode='validation')
+               tmp_valid_loss = self._run(self.model, self.criterion, self.valid_data_loader, self.valid_batch_size, mode='validation')
+               valid_loss = np.append(valid_loss, tmp_valid_loss.clone().numpy())
                  
             if (epoch + 1) % 10 == 0:
-                torch.save(self.model.state_dict(), self.save_path + 'wave_u_net{0}.ckpt'.format(epoch))
+                torch.save(self.model.state_dict(), self.save_path + 'wave_u_net{0}.ckpt'.format(epoch + 1))
+            
+            end = time.time()
+            print('----excute time: {0}'.format(end - start))
+            plt.plot(train_loss)
+            print(train_loss)
+            plt.show()
                         
 if __name__ == '__main__':
     from configs.train_inst_num2_config import cfg as train_cfg

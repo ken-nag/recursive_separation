@@ -3,6 +3,8 @@ import numpy as np
 import sys
 sys.path.append('../')
 import glob
+import random
+random.seed(0)
 
 class SlakhDataset(torch.utils.data.Dataset):
     def __init__(self, inst_num, data_num, sample_len=None, transform=None, folder_type=None):
@@ -14,8 +16,9 @@ class SlakhDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.data_num
         
-    def __getitem__(self, idx):         
-        npz_obj = np.load(self.npzs_path[idx])
+    def __getitem__(self, idx):
+        path = random.sample(self.npzs_path, 1)
+        npz_obj = np.load(path[0])
         mixture = npz_obj['mixture']
         sources = npz_obj['sources']
         inst_num = npz_obj['instruments_num']

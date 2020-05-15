@@ -18,6 +18,7 @@ class SlakhToNpz():
         self.sec = 10
         self.fs = 44100
         self.target_fs = 16000
+        self.target_len = 16384
         self.slakh_folder_path = '../data/slakh2100_flac/'
         self.save_folder_path ='../data/slakh_inst{0}/'.format(inst_num)
         
@@ -38,7 +39,9 @@ class SlakhToNpz():
         np.savez(file_path, mixture=mixture, sources=sources, instruments_num=self.inst_num)
         
     def _silent_exist(self, x):
-        norm = np.linalg.norm(x, ord=1, axis=1)
+        d = x.shape[1] - self.target_len
+        target_x = x[:,d//2:-d+(d//2)]
+        norm = np.linalg.norm(target_x, ord=1, axis=1)
         return  True if np.any(norm == 0) else False
     
     def _random_cutting(self, sources):
@@ -134,7 +137,7 @@ class SlakhToNpz():
             
 if __name__ == '__main__':
     random.seed(0)
-    obj = SlakhToNpz(inst_num=2, train_npz_num=20000, valid_npz_num=2000)
+    obj = SlakhToNpz(inst_num=2, train_npz_num=20, valid_npz_num=20)
     obj.make_train_tracks(mode='train')
     obj.make_train_tracks(mode='validation')
     obj.make_test_tracks()

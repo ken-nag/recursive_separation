@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import sys
 sys.path.append('../')
 from utils.wave_net_utils import Utils
+import warnings
+warnings.filterwarnings('ignore')
     
 class _DownsampleBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride, leakiness):

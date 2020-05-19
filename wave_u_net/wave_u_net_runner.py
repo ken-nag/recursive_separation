@@ -7,7 +7,6 @@ from data_utils.slakh_dataset import SlakhDataset
 from utils.loss import SiSNRLoss
 from utils.wave_net_utils import WaveUNetUtils
 from utils.common_utils import CommonUtils
-from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 %matplotlib inline

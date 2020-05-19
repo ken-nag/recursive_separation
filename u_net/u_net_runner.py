@@ -5,13 +5,13 @@ sys.path.append('../')
 from models.wave_u_net import WaveUNet
 from data_utils.slakh_dataset import SlakhDataset
 from utils.loss import SiSNRLoss
-from utils.wave_net_utils import Utils
+
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
-%matplotlib inline
+# %matplotlib inline
    
-class WaveUNetRunner(Utils):
+class UNetRunner():
     def __init__(self, cfg):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.dtype= torch.float32
@@ -33,7 +33,8 @@ class WaveUNetRunner(Utils):
         self.criterion = SiSNRLoss()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-3)
         self.save_path = 'results/model/inst_num_{0}/'.format(self.inst_num)
-            
+        
+        self.stft_module = 
     def _run(self, model, criterion, data_loader, batch_size, mode=None):
         running_loss = 0
         for i, (mixtures, sources, _) in enumerate(data_loader):
@@ -43,8 +44,6 @@ class WaveUNetRunner(Utils):
             est_sources, est_accompany = model(mixtures)
             
             if mode == 'train' or mode == 'validation':
-                true_sources = self.centre_crop(est_sources, sources)
-                true_mixtures = self.centre_crop(est_sources, mixtures.unsqueeze(1))
                 true_res_sources = true_mixtures.repeat(1,self.inst_num,1) - true_sources
                 loss = criterion(est_sources, est_accompany, true_sources, true_res_sources, self.inst_num)
                 print(loss.data)

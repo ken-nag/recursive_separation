@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import sys
 sys.path.append('../')
-from utils.wave_net_utils import Utils
+from utils.wave_net_utils import WaveUNetUtils as Utils
 import warnings
 warnings.filterwarnings('ignore')
     
@@ -51,6 +51,7 @@ class _UpsampleBlock(nn.Module, Utils):
 class WaveUNet(nn.Module, Utils):
     def __init__(self, sample_len=147443):
         super().__init__()
+        # self.depth = 12
         self.depth = 12
         self.Lm = sample_len
         self.Ls = 16389

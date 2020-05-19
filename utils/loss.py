@@ -1,5 +1,11 @@
 import torch
+import torch.nn.functional as F
+#to_do recursiveに対応する
+#to_do est_sourceに対してlossをとる、最小のインデックスを探す
+#to do lossがちゃんと測れているかみる
 
+# class Preporcess():
+#     # to do recursiveに必要な前処理をやる
 class SiSNRLoss():
     def __init__(self):
         self.epsilon = 1e-10
@@ -28,6 +34,17 @@ class SiSNRLoss():
         est_res_sources = est_res_sources.repeat(1, inst_num, 1)
         err = self._cal_err(est_sources, est_res_sources, true_sources, true_res_sources, inst_num)
         min_loss, _ = torch.min(err.squeeze(2), dim=1)
-        loss  = torch.sum(min_loss, dim=0) / batch_size
-        return loss 
+        loss = torch.sum(min_loss, dim=0) / batch_size
+        return loss
+ 
+class MSE():
+    def _cal_err(self,est_sources, true_sources):
+        return torch.mean((est_sources - true_sources)**2, keepdim=True, dim=2)
     
+    def __call__(self,  est_sources, est_res_sources, true_sources, true_res_sources, inst_num):
+        batch_size = est_sources.shape[0]
+        est_sources = est_sources.repeat(1, inst_num, 1)
+        est_res_sources = est_res_sources.repeat(1, inst_num, 1)
+        mse_source = self._cal_err(est_sources, true_sources)
+        mse_res_source = self._cal_err(est_res_sources, true_res_sources)
+        min_loss  = torch.min()

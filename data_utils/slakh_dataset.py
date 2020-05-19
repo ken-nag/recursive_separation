@@ -19,6 +19,11 @@ class SlakhDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         path = random.sample(self.npzs_path, 1)
         npz_obj = np.load(path[0])
+        
+        # for debug
+        # path = self.npzs_path[5]
+        # npz_obj = np.load(path)
+        
         mixture = npz_obj['mixture']
         sources = npz_obj['sources']
         inst_num = npz_obj['instruments_num']

@@ -15,16 +15,15 @@ class UNet(nn.Module):
         self.encoders = nn.ModuleDict()
         self.decoders = nn.ModuleDict()
         
-        for channel in encoder_channels:
+        for channel in self.encoder_channels:
             self.encoders.append(self._encoder_bolock(dim_in=channel[0], dim_out=channel[1]))
             
-        for i, channel in enumerate(decoder_channels):
+        for i, channel in enumerate(self.decoder_channels):
             drop_out = True if i < 3 else False
             self.decoders.append(self._decoder_block(dim_in=channel[0], dim_out=channel[1], drop_out=drop_out))
             
         self.last_layer = nn.ConvTranspose2d(32, 1, self.kernel_size, self.stride)
             
-        
     def _encoder_bolock(self, dim_in, dim_out):
         return nn.Sequential(
             nn.Conv2d(dim_in, dim_out, self.kernel_size, self.stride, self.padding),
@@ -43,19 +42,23 @@ class UNet(nn.Module):
                nn.ConvTranspose2d(), 
                nn.BatchNorm2d(), 
                nn.ReLU())
+       
+    def _preporcess(self, ):
+    def _postprocess(self, ):
             
     def forward(self, input):
+        
         outputs = []
         outputs.append(input)
         
         # encoder
-        for i in range(depth):
+        for i in range(self.depth):
             prev_output = outputs[-1]
             outputs.append(self.encoders[i](prev_output))
         
         # decoder
         outputs.append(self.decoders[0](outputs[-1]))
-        for i in range(depth-2):
+        for i in range(self.depth-2):
             prev_output = outputs[-1]
             outputs.append(self.decoders[i+1](torch.cat([prev_output,outputs[-(i+3)]], dim=1)))
             

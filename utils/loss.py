@@ -39,12 +39,12 @@ class SiSNRLoss():
  
 class MSE():
     def _cal_err(self,est_sources, true_sources):
-        return torch.mean((est_sources - true_sources)**2, keepdim=True, dim=2)
+        return torch.mean((est_sources - true_sources)**2, keepdim=True, dim=(2,3))
     
-    def __call__(self,  est_sources, est_res_sources, true_sources, true_res_sources, inst_num):
-        batch_size = est_sources.shape[0]
-        est_sources = est_sources.repeat(1, inst_num, 1)
-        est_res_sources = est_res_sources.repeat(1, inst_num, 1)
-        mse_source = self._cal_err(est_sources, true_sources)
-        mse_res_source = self._cal_err(est_res_sources, true_res_sources)
-        min_loss  = torch.min()
+    def __call__(self,  est_source, true_sources, inst_num):
+        batch_size, _, _, _ = est_source.shape
+        est_sources = est_source.repeat(1, inst_num, 1, 1)
+        mse_val= self._cal_err(est_sources, true_sources)
+        min_loss, _  = torch.min(mse_val, dim=1)
+        loss = torch.sum(min_loss) / batch_size
+        return loss

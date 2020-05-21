@@ -21,7 +21,7 @@ class SlakhDataset(torch.utils.data.Dataset):
         npz_obj = np.load(path[0])
         
         # for debug
-        # path = self.npzs_path[5]
+        # path = self.npzs_path[7]
         # npz_obj = np.load(path)
         
         mixture = npz_obj['mixture']

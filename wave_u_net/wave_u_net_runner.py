@@ -48,7 +48,6 @@ class WaveUNetRunner(WaveUNetUtils, CommonUtils):
                 true_mixtures = self.centre_crop(est_sources, mixtures.unsqueeze(1))
                 true_res_sources = true_mixtures.repeat(1,self.inst_num,1) - true_sources
                 loss = criterion(est_sources, est_accompany, true_sources, true_res_sources, self.inst_num)
-                print(loss)
                 running_loss += loss.data
                 if mode == 'train':
                     model.zero_grad()

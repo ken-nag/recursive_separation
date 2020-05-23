@@ -11,12 +11,15 @@ import numpy as np
 from utils.stft_module import STFTModule
 import torchaudio.functional as taF
 
+
 class UNetRunner():
     def __init__(self, cfg):
-        self.stft_module = STFTModule(cfg['stft_params'])
+        
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.dtype= torch.float32
-
+        self.eps = 1e-4
+        
+        self.stft_module = STFTModule(cfg['stft_params'])
         self.inst_num = cfg['inst_num']
         self.train_data_num = cfg['train_data_num']
         self.valid_data_num = cfg['valid_data_num']
@@ -40,7 +43,7 @@ class UNetRunner():
         mix_phase = mix_spec[:,:,1]
         mix_amp_spec = taF.complex_norm(mix_spec)
         mix_amp_spec = mix_amp_spec[:,1:,:]
-        mix_mag_spec = torch.log10(mix_amp_spec)
+        mix_mag_spec = torch.log10(mix_amp_spec + self.eps)
         mix_mag_spec = mix_mag_spec[:,1:,:]
         
         true_sources_spec = self.stft_module.stft_3D(true_sources, pad=True)
@@ -57,23 +60,22 @@ class UNetRunner():
         
     def _run(self, model, criterion, data_loader, batch_size, mode=None):
         running_loss = 0
-        for i, (mixture, sources, _) in enumerate(data_loader):
-            mix_mag_spec, true_sources_amp_spec, true_res_amp_spec, _, mix_amp_spec = self._preprocess(mixture, sources)
-            mix_mag_spec = mix_mag_spec.to(self.dtype).to(self.device)
-            true_sources_amp_spec = true_sources_amp_spec.to(self.dtype).to(self.device)
-            true_res_amp_spec = true_res_amp_spec.to(self.dtype).to(self.device)
-            
-            model.zero_grad()
-            est_mask = model(mix_mag_spec.unsqueeze(1))
-            est_sources = mix_amp_spec.unsqueeze(1) * est_mask
-            
-            if mode == 'train' or mode == 'validation':
-                loss = 10 * criterion(est_sources, true_sources_amp_spec, self.inst_num)
-                print(loss.data)
-                running_loss += loss.data
-                if mode == 'train':
-                    loss.backward()
-                    self.optimizer.step()
+        with torch.autograd.detect_anomaly():
+            for i, (mixture, sources, _) in enumerate(data_loader):
+                mixture = mixture.to(self.dtype).to(self.device)
+                sources = sources.to(self.dtype).to(self.device)
+                mix_mag_spec, true_sources_amp_spec, true_res_amp_spec, _, mix_amp_spec = self._preprocess(mixture, sources)
+                
+                model.zero_grad()
+                est_mask = model(mix_mag_spec.unsqueeze(1))
+                est_sources = mix_amp_spec.unsqueeze(1) * est_mask
+                
+                if mode == 'train' or mode == 'validation':
+                    loss = 10 * criterion(est_sources, true_sources_amp_spec, self.inst_num)
+                    running_loss += loss.data
+                    if mode == 'train':
+                        loss.backward()
+                        self.optimizer.step()
             
         return (running_loss / (i+1)), est_sources, est_mask, mix_amp_spec
     
@@ -87,12 +89,12 @@ class UNetRunner():
             start = time.time()
             self.model.train()
             tmp_train_loss, _, _, _ = self._run(self.model, self.criterion, self.train_data_loader, self.train_batch_size, mode='train')
-            train_loss = np.append(train_loss, tmp_train_loss.clone().numpy())
+            train_loss = np.append(train_loss, tmp_train_loss.cpu().clone().numpy())
             # validation
             self.model.eval()
             with torch.no_grad():
                tmp_valid_loss, est_source, est_mask, mix_amp_spec = self._run(self.model, self.criterion, self.valid_data_loader, self.valid_batch_size, mode='validation')
-               valid_loss = np.append(valid_loss, tmp_valid_loss.clone().numpy())
+               valid_loss = np.append(valid_loss, tmp_valid_loss.cpu().clone().numpy())
                  
             if (epoch + 1) % 10 == 0:
                 torch.save(self.model.state_dict(), self.save_path + 'u_net{0}.ckpt'.format(epoch + 1))

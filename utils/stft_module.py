@@ -35,7 +35,7 @@ class STFTModule():
         frame_num = self._cal_frame_num(sig_len)
         pad_x_len = self.win_length + ((frame_num - 1) * self.hop_length)
         self.pad_len = pad_x_len - sig_len
-        buff = torch.zeros(batch_size, pad_x_len)
+        buff = torch.zeros(batch_size, pad_x_len).to(self.dtype).to(self.device)
         buff[:, :sig_len] = x
         return buff
        
@@ -56,7 +56,7 @@ class STFTModule():
     def stft_3D(self, x, pad=None):
        batch_size, source_num, sig_len = x.shape
        frame_num = self._cal_frame_num(sig_len)
-       buff = torch.zeros((batch_size, source_num, self.freq_num, frame_num, 2))
+       buff = torch.zeros((batch_size, source_num, self.freq_num, frame_num, 2)).to(self.dtype).to(self.device)
        for i, source in enumerate(x):
            buff[i, :, :, :, :] = self.stft(source, pad=pad)
            

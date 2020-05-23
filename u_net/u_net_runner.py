@@ -7,7 +7,7 @@ from data_utils.slakh_dataset import SlakhDataset
 from utils.loss import MSE
 from utils.visualizer import show_TF_domein_result
 import numpy as np
-# %matplotlib inline
+%matplotlib inline
 from utils.stft_module import STFTModule
 import torchaudio.functional as taF
 

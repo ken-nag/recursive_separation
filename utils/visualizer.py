@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+    
 def show_TF_domein_result(loss, mixture, mask, estimate, vmin=-60, eps=1e-10):
     mixture = mixture.cpu().clone().numpy()
     mask = mask.cpu().clone().numpy()
@@ -16,6 +17,7 @@ def show_TF_domein_result(loss, mixture, mask, estimate, vmin=-60, eps=1e-10):
 
     axes[0,0].plot(loss)
     axes[0,0].set_title('loss')
+    axes[0,0].axis('equal')
     
     axes[0,1].imshow(20*np.log10(np.flipud(mixture)+eps), vmax=vmax, vmin=vmin)
     axes[0,1].set_title('mixture')
@@ -28,8 +30,6 @@ def show_TF_domein_result(loss, mixture, mask, estimate, vmin=-60, eps=1e-10):
 
         
     plt.tight_layout()
-    for axis in axes.flatten():
-        axis.set_aspect('equal', adjustable='box')
         
     plt.show()
     plt.close()

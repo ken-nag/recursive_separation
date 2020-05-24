@@ -137,7 +137,7 @@ class SlakhToNpz():
             
 if __name__ == '__main__':
     random.seed(0)
-    obj = SlakhToNpz(inst_num=3, train_npz_num=20000, valid_npz_num=2000)
+    obj = SlakhToNpz(inst_num=4, train_npz_num=20000, valid_npz_num=2000)
     obj.make_train_tracks(mode='train')
     obj.make_train_tracks(mode='validation')
     obj.make_test_tracks()

@@ -60,22 +60,21 @@ class UNetRunner():
         
     def _run(self, model, criterion, data_loader, batch_size, mode=None):
         running_loss = 0
-        with torch.autograd.detect_anomaly():
-            for i, (mixture, sources, _) in enumerate(data_loader):
-                mixture = mixture.to(self.dtype).to(self.device)
-                sources = sources.to(self.dtype).to(self.device)
-                mix_mag_spec, true_sources_amp_spec, true_res_amp_spec, _, mix_amp_spec = self._preprocess(mixture, sources)
-                
-                model.zero_grad()
-                est_mask = model(mix_mag_spec.unsqueeze(1))
-                est_sources = mix_amp_spec.unsqueeze(1) * est_mask
-                
-                if mode == 'train' or mode == 'validation':
-                    loss = 10 * criterion(est_sources, true_sources_amp_spec, self.inst_num)
-                    running_loss += loss.data
-                    if mode == 'train':
-                        loss.backward()
-                        self.optimizer.step()
+        for i, (mixture, sources, _) in enumerate(data_loader):
+            mixture = mixture.to(self.dtype).to(self.device)
+            sources = sources.to(self.dtype).to(self.device)
+            mix_mag_spec, true_sources_amp_spec, true_res_amp_spec, _, mix_amp_spec = self._preprocess(mixture, sources)
+            
+            model.zero_grad()
+            est_mask = model(mix_mag_spec.unsqueeze(1))
+            est_sources = mix_amp_spec.unsqueeze(1) * est_mask
+            
+            if mode == 'train' or mode == 'validation':
+                loss = 10 * criterion(est_sources, true_sources_amp_spec, self.inst_num)
+                running_loss += loss.data
+                if mode == 'train':
+                    loss.backward()
+                    self.optimizer.step()
             
         return (running_loss / (i+1)), est_sources, est_mask, mix_amp_spec
     
